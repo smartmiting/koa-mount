@@ -2,7 +2,7 @@
   "name": "@smartmiting/koa-mount",
   "description": "Mounting middleware for koa",
   "repository": "smartmiting/koa-mount",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "keywords": [
     "koa",
     "middleware",
