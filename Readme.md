@@ -8,7 +8,7 @@
 ## Installation
 
 ```js
-$ npm install koa-mount
+$ npm install @smartmiting/koa-mount
 ```
 
 ## Examples
@@ -23,7 +23,7 @@ $ npm install koa-mount
   when mounted.
 
 ```js
-const mount = require('koa-mount');
+const mount = require('@smartmiting/koa-mount');
 const Koa = require('koa');
 
 // hello
@@ -74,7 +74,7 @@ World
   of the prefix, as they're not aware of it.
 
 ```js
-const mount = require('koa-mount');
+const mount = require('@smartmiting/koa-mount');
 const Koa = require('koa');
 
 async function hello(ctx, next){
@@ -104,6 +104,25 @@ console.log('listening on port 3000');
 app.use(mount(a));
 app.use(mount(b));
 ```
+
+### Optional Config
+
+  option parameter is optional.
+  * `preserve` node is the switch to preserve each app instance, default is false
+     
+     when `preserve` is true, it can solve the problem:
+     
+     - [mounted app.keys ignored](https://github.com/koajs/mount/issues/29)
+     - [https://github.com/koajs/koa/issues/203](https://github.com/koajs/koa/issues/203#issuecomment-47097294)
+     - [support to preserve app context on mounted Koa app](https://github.com/koajs/mount/pull/58)
+  
+```js
+app.use(mount('/api', apiInstance, {preserve: true}));
+```
+
+## Todos
+
+1. set default cookie path for preserved koa app
 
 ## Debugging
 
