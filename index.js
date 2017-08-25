@@ -8,6 +8,12 @@ const compose = require('koa-compose')
 const assert = require('assert')
 
 /**
+ * This keys will be read from the cxt in the koa app's handleResponse func
+ * @type {[string,string,string,string,string]}
+ */
+const KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT = ['respond', 'writable', 'body', 'status', 'message'];
+
+/**
  * Expose `mount()`.
  */
 
@@ -68,12 +74,15 @@ function mount(prefix, app, option = {}) {
 
     await downstream(newCtx, async () => {
       ctx.path = prev
+      smartCopyTo(ctx, newCtx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
       await upstream()
       ctx.path = newPath
+      smartCopyTo(newCtx, ctx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
     })
 
     debug('leave %s -> %s', prev, ctx.path)
     ctx.path = prev
+    smartCopyTo(ctx, newCtx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
   }
 
   /**
@@ -103,11 +112,22 @@ function mount(prefix, app, option = {}) {
     return newPath
   }
 
-  function getProps(ctx, keys) {
-    return keys.reduce((props, key) => {
-      props[key] = ctx[key];
-      return props;
-    }, {});
-  }
+  /**
+   * smart pick context values between preserved app context and hosted app's context
+   * @param to copyTo app context
+   * @param from copyFrom app context
+   * @param props prop names array which need to copy
+   */
+  function smartCopyTo(to, from, props){
+    //same object, ignore pick
+    // if preserve is false, same context don't need to copy
+    if(to === from) return to
 
+    //convert props to array
+    props = [].concat(props)
+
+    props
+      .filter(key => !!key)
+      .forEach(key => to[key] = from[key])
+  }
 }
