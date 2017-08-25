@@ -354,25 +354,60 @@ describe('mount(/prefix, app, {preserve: true})', () => {
     mounted.subdomainOffset = 3
     mounted.use(async (ctx) => {
       ctx.app.subdomainOffset.should.equal(3)
-      ctx.status = 200
+      ctx.status = 204
     })
 
     const app = new Koa()
     app.use(mount('/a', mounted, {preserve: true}))
     app.use(async (ctx) => {
       ctx.app.subdomainOffset.should.equal(2)
-      ctx.status = 200
+      ctx.status = 204
     })
 
     const server = app.listen()
 
     await request(server)
       .get('/a/b')
-      .expect(200)
+      .expect(204)
 
     await request(server)
       .get('/c/d')
-      .expect(200)
+      .expect(204)
+  })
+
+  it('should response its content', async () => {
+    const mounted = new Koa()
+    mounted.use(async (ctx) => {
+      ctx.body = 'mount'
+      ctx.status = 200
+    })
+
+    const app = new Koa()
+    app.use(async (ctx, next) => {
+      if(ctx.path === '/premount'){
+        ctx.body = 'premount'
+        ctx.status = 200
+      } else return await next()
+    })
+    app.use(mount('/mount', mounted, {preserve: true}))
+    app.use(async (ctx) => {
+      ctx.body = 'aftermount'
+      ctx.status = 200
+    })
+
+    const server = app.listen()
+
+    await request(server)
+      .get('/premount')
+      .expect('premount')
+
+    await request(server)
+      .get('/mount')
+      .expect('mount')
+
+    await request(server)
+      .get('/aftermount')
+      .expect('aftermount')
   })
 })
 
