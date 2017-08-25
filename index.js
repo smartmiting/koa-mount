@@ -20,14 +20,14 @@ module.exports = mount
  *
  * @param {String|Application|Function} prefix, app, or function
  * @param {Application|Function} [app or function]
- * @param {Boolean} [preserve]
+ * @param {Object} [option]
  * @return {Function}
  * @api public
  */
 
-function mount(prefix, app, preserve) {
+function mount(prefix, app, option = {}) {
   if (typeof prefix !== 'string') {
-    preserve = app
+    option = app
     app = prefix
     prefix = '/'
   }
@@ -47,6 +47,9 @@ function mount(prefix, app, preserve) {
   const name = app.name || 'unnamed'
   debug('mount %s %s', prefix, name)
 
+  //if option.preserve is valid and app has createContext function
+  const preserve = !!option.preserve && app.createContext;
+
   return async function (ctx, upstream) {
     const prev = ctx.path
     const newPath = match(prev)
@@ -56,10 +59,6 @@ function mount(prefix, app, preserve) {
     let newCtx = ctx;
     if (preserve) {
       newCtx = app.createContext(ctx.req, ctx.res);
-      // use the same instance of Koa Request and Response on both ctx
-      // to be able to send response of the mounted app
-      newCtx.request = ctx.request;
-      newCtx.response = ctx.response;
     }
 
     newCtx.mountPath = prefix

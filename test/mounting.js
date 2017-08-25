@@ -321,7 +321,7 @@ describe('mount(/prefix/)', function () {
   })
 })
 
-describe('mount(/prefix, app, preserve=true)', () => {
+describe('mount(/prefix, app, {preserve: true})', () => {
   it('should find its context props', async () => {
     const mounted = new Koa()
     mounted.context.a = 1
@@ -332,7 +332,7 @@ describe('mount(/prefix, app, preserve=true)', () => {
 
     const app = new Koa()
     app.context.a = 2
-    app.use(mount('/a', mounted, true))
+    app.use(mount('/a', mounted, {preserve: true}))
     app.use(async (ctx) => {
       ctx.a.should.equal(2)
       ctx.status = 200
@@ -347,6 +347,32 @@ describe('mount(/prefix, app, preserve=true)', () => {
     await request(server)
     .get('/c/d')
     .expect(200)
+  })
+
+  it('should find its subdomainOffset props', async () => {
+    const mounted = new Koa()
+    mounted.subdomainOffset = 3
+    mounted.use(async (ctx) => {
+      ctx.app.subdomainOffset.should.equal(3)
+      ctx.status = 200
+    })
+
+    const app = new Koa()
+    app.use(mount('/a', mounted, {preserve: true}))
+    app.use(async (ctx) => {
+      ctx.app.subdomainOffset.should.equal(2)
+      ctx.status = 200
+    })
+
+    const server = app.listen()
+
+    await request(server)
+      .get('/a/b')
+      .expect(200)
+
+    await request(server)
+      .get('/c/d')
+      .expect(200)
   })
 })
 
