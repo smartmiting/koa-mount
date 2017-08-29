@@ -375,6 +375,30 @@ describe('mount(/prefix, app, {preserve: true})', () => {
       .expect(204)
   })
 
+  it('should return its response code', async () => {
+    const mounted = new Koa()
+    mounted.use(async (ctx) => {
+      ctx.status = 302
+      ctx.redirect('http://baidu.com')
+    })
+
+    const app = new Koa()
+    app.use(mount('/a', mounted, {preserve: true}))
+    app.use(async (ctx) => {
+      ctx.status = 204
+    })
+
+    const server = app.listen()
+
+    await request(server)
+      .get('/a/b')
+      .expect(302)
+
+    await request(server)
+      .get('/c/d')
+      .expect(204)
+  })
+
   it('should response its content', async () => {
     const mounted = new Koa()
     mounted.use(async (ctx) => {
