@@ -11,7 +11,7 @@ const assert = require('assert')
  * This keys will be read from the cxt in the koa app's handleResponse func
  * @type {[string,string,string,string,string]}
  */
-const KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT = ['respond', 'writable', 'body', 'status', 'message'];
+const KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT = ['respond', 'body'];
 
 /**
  * Expose `mount()`.
