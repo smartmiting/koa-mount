@@ -105,6 +105,26 @@ app.use(mount(a));
 app.use(mount(b));
 ```
 
+### Optional Config
+
+  option parameter is optional.
+  * `preserve` node is the switch to preserve each app instance, default is false
+     
+     when `preserve` is true, it can solve the problem:
+     
+     - [mounted app.keys ignored](https://github.com/koajs/mount/issues/29)
+     - [https://github.com/koajs/koa/issues/203](https://github.com/koajs/koa/issues/203#issuecomment-47097294)
+     - [support to preserve app context on mounted Koa app](https://github.com/koajs/mount/pull/58)
+  
+```js
+app.use(mount('/api', apiInstance, {preserve: true}));
+```
+
+## Todos
+
+1. set default cookie path for preserved koa app
+2. support preserve the mounted app context which without mount path('/') 
+
 ## Debugging
 
   Use the __DEBUG__ environement variable to whitelist
