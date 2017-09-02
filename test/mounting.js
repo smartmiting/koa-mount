@@ -323,20 +323,23 @@ describe('mount(/prefix/)', function () {
 
 describe('mount(/prefix, app, {preserve: true})', () => {
   it('should find its context props', async () => {
-    const mounted = new Koa()
-    mounted.context.a = 1
-    mounted.use(async (ctx) => {
+    const mounted1 = new Koa()
+    mounted1.context.a = 1
+    mounted1.use(async (ctx) => {
       ctx.a.should.equal(1)
       ctx.status = 204
     })
 
-    const app = new Koa()
-    app.context.a = 2
-    app.use(mount('/a', mounted, {preserve: true}))
-    app.use(async (ctx) => {
+    const mounted2 = new Koa()
+    mounted2.context.a = 2
+    mounted2.use(async (ctx) => {
       ctx.a.should.equal(2)
-      ctx.status = 200
+      ctx.status = 204
     })
+
+    const app = new Koa()
+    app.use(mount('/a', mounted1, {preserve: true}))
+    app.use(mount(mounted2, {preserve: true}))
 
     const server = app.listen()
 
@@ -346,23 +349,27 @@ describe('mount(/prefix, app, {preserve: true})', () => {
 
     await request(server)
     .get('/c/d')
-    .expect(200)
+    .expect(204)
   })
 
   it('should find its subdomainOffset props', async () => {
-    const mounted = new Koa()
-    mounted.subdomainOffset = 3
-    mounted.use(async (ctx) => {
+    const mounted1 = new Koa()
+    mounted1.subdomainOffset = 3
+    mounted1.use(async (ctx) => {
       ctx.app.subdomainOffset.should.equal(3)
       ctx.status = 204
     })
 
-    const app = new Koa()
-    app.use(mount('/a', mounted, {preserve: true}))
-    app.use(async (ctx) => {
-      ctx.app.subdomainOffset.should.equal(2)
+    const mounted2 = new Koa()
+    mounted2.subdomainOffset = 4
+    mounted2.use(async (ctx) => {
+      ctx.app.subdomainOffset.should.equal(4)
       ctx.status = 204
     })
+
+    const app = new Koa()
+    app.use(mount('/a', mounted1, {preserve: true}))
+    app.use(mount(mounted2, {preserve: true}))
 
     const server = app.listen()
 
@@ -376,17 +383,20 @@ describe('mount(/prefix, app, {preserve: true})', () => {
   })
 
   it('should return its response code', async () => {
-    const mounted = new Koa()
-    mounted.use(async (ctx) => {
+    const mounted1 = new Koa()
+    mounted1.use(async (ctx) => {
       ctx.status = 302
       ctx.redirect('http://baidu.com')
     })
 
-    const app = new Koa()
-    app.use(mount('/a', mounted, {preserve: true}))
-    app.use(async (ctx) => {
+    const mounted2 = new Koa()
+    mounted2.use(async (ctx) => {
       ctx.status = 204
     })
+
+    const app = new Koa()
+    app.use(mount('/a', mounted1, {preserve: true}))
+    app.use(mount(mounted2, {preserve: true}))
 
     const server = app.listen()
 
@@ -400,20 +410,32 @@ describe('mount(/prefix, app, {preserve: true})', () => {
   })
 
   it('should response its content', async () => {
-    const mounted = new Koa()
-    mounted.use(async (ctx) => {
-      ctx.body = 'mount'
+    const mounted1 = new Koa()
+    mounted1.use(async (ctx) => {
+      ctx.body = 'mount1'
       ctx.status = 200
     })
 
-    const app = new Koa()
-    app.use(async (ctx, next) => {
-      if(ctx.path === '/premount'){
-        ctx.body = 'premount'
+    const mounted2 = new Koa()
+    mounted2.use(async (ctx, next) => {
+      if (ctx.path === '/mount2') {
+        ctx.body = 'mount2'
         ctx.status = 200
       } else return await next()
     })
-    app.use(mount('/mount', mounted, {preserve: true}))
+
+    const app = new Koa()
+    app.use(mount('/mount1', mounted1, {preserve: true}))
+
+    app.use((ctx, next) => {
+      if (ctx.path === '/premount') {
+        ctx.body = 'premount'
+        ctx.status = 200
+      } else return next()
+    })
+
+    app.use(mount(mounted2, {preserve: true}))
+
     app.use(async (ctx) => {
       ctx.body = 'aftermount'
       ctx.status = 200
@@ -422,12 +444,16 @@ describe('mount(/prefix, app, {preserve: true})', () => {
     const server = app.listen()
 
     await request(server)
+      .get('/mount1')
+      .expect('mount1')
+
+    await request(server)
       .get('/premount')
       .expect('premount')
 
     await request(server)
-      .get('/mount')
-      .expect('mount')
+      .get('/mount2')
+      .expect('mount2')
 
     await request(server)
       .get('/aftermount')

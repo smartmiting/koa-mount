@@ -35,7 +35,7 @@ module.exports = mount
 
 function mount (prefix, app, option = {}) {
   if (typeof prefix !== 'string') {
-    option = app
+    option = app || {}
     app = prefix
     prefix = '/'
   }
@@ -47,22 +47,23 @@ function mount (prefix, app, option = {}) {
     ? compose(app.middleware)
     : app
 
+  // if option.preserve is valid and app has createContext function
+  const preserve = !!option.preserve && app.createContext
+
   // don't need to do mounting here
-  if (prefix === '/') return downstream
+  // if need to preserve, '/' also need to do mounting
+  if (prefix === '/' && !preserve) return downstream
 
   const trailingSlash = prefix.slice(-1) === '/'
 
   const name = app.name || 'unnamed'
   debug('mount %s %s', prefix, name)
 
-  // if option.preserve is valid and app has createContext function
-  const preserve = !!option.preserve && app.createContext
-
   return async function (ctx, upstream) {
     const prev = ctx.path
-    const newPath = match(prev)
+    const newPath = prefix === '/' ? prev : match(prev)
     debug('mount %s %s -> %s', prefix, name, newPath)
-    if (!newPath) return upstream()
+    if (!newPath) return await upstream()
 
     let newCtx = ctx
     if (preserve) {
@@ -71,6 +72,7 @@ function mount (prefix, app, option = {}) {
 
     newCtx.mountPath = prefix
     newCtx.path = newPath
+    smartCopyTo(newCtx, ctx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
 
     debug('enter %s -> %s', prev, newCtx.path)
 
