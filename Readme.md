@@ -123,7 +123,7 @@ app.use(mount('/api', apiInstance, {preserve: true}));
 ## Todos
 
 1. set default cookie path for preserved koa app
-2. preserve the mounted app context which without mount path('/') 
+2. <del>preserve the mounted app context which without mount path('/') </del> [2017-09-03]
 
 ## Debugging
 

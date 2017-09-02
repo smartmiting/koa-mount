@@ -12,8 +12,8 @@ const assert = require('assert')
  * got these keys from https://github.com/koajs/koa/blob/master/lib/application.js#L193
  * @type {[string,string,string]}
  */
-//Must keep status before than body, otherwise status will be set to 200
-const KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT = ['respond', 'status', 'body'];
+// Must keep status before than body, otherwise status will be set to 200
+const KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT = ['respond', 'status', 'body']
 
 /**
  * Expose `mount()`.
@@ -33,9 +33,9 @@ module.exports = mount
  * @api public
  */
 
-function mount(prefix, app, option = {}) {
+function mount (prefix, app, option = {}) {
   if (typeof prefix !== 'string') {
-    option = app
+    option = app || {}
     app = prefix
     prefix = '/'
   }
@@ -47,30 +47,32 @@ function mount(prefix, app, option = {}) {
     ? compose(app.middleware)
     : app
 
+  // if option.preserve is valid and app has createContext function
+  const preserve = !!option.preserve && app.createContext
+
   // don't need to do mounting here
-  if (prefix === '/') return downstream
+  // if need to preserve, '/' also need to do mounting
+  if (prefix === '/' && !preserve) return downstream
 
   const trailingSlash = prefix.slice(-1) === '/'
 
   const name = app.name || 'unnamed'
   debug('mount %s %s', prefix, name)
 
-  //if option.preserve is valid and app has createContext function
-  const preserve = !!option.preserve && app.createContext;
-
   return async function (ctx, upstream) {
     const prev = ctx.path
-    const newPath = match(prev)
+    const newPath = prefix === '/' ? prev : match(prev)
     debug('mount %s %s -> %s', prefix, name, newPath)
     if (!newPath) return await upstream()
 
-    let newCtx = ctx;
+    let newCtx = ctx
     if (preserve) {
-      newCtx = app.createContext(ctx.req, ctx.res);
+      newCtx = app.createContext(ctx.req, ctx.res)
     }
 
     newCtx.mountPath = prefix
     newCtx.path = newPath
+    smartCopyTo(newCtx, ctx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
 
     debug('enter %s -> %s', prev, newCtx.path)
 
@@ -120,16 +122,16 @@ function mount(prefix, app, option = {}) {
    * @param from copyFrom app context
    * @param props prop names array which need to copy
    */
-  function smartCopyTo(to, from, props){
-    //same object, ignore pick
+  function smartCopyTo (to, from, props) {
+    // same object, ignore pick
     // if preserve is false, same context don't need to copy
-    if(to === from) return to
+    if (to === from) return to
 
-    //convert props to array
+    // convert props to array
     props = [].concat(props)
 
     props
       .filter(key => !!key)
-      .forEach(key => to[key] = from[key])
+      .forEach(key => { to[key] = from[key] })
   }
 }
