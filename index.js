@@ -8,14 +8,6 @@ const compose = require('koa-compose')
 const assert = require('assert')
 
 /**
- * This keys will be read from the cxt in the koa app's handleResponse func
- * got these keys from https://github.com/koajs/koa/blob/master/lib/application.js#L193
- * @type {[string,string,string]}
- */
-// Must keep status before than body, otherwise status will be set to 200
-const KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT = ['respond', 'status', 'body']
-
-/**
  * Expose `mount()`.
  */
 
@@ -72,21 +64,21 @@ function mount (prefix, app, option = {}) {
 
     newCtx.mountPath = prefix
     newCtx.path = newPath
-    smartCopyTo(newCtx, ctx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
+    syncApps(ctx, newCtx)
 
     debug('enter %s -> %s', prev, newCtx.path)
 
     await downstream(newCtx, async () => {
       ctx.path = prev
-      smartCopyTo(ctx, newCtx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
+      syncApps(newCtx, ctx)
       await upstream()
       ctx.path = newPath
-      smartCopyTo(newCtx, ctx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
+      syncApps(ctx, newCtx)
     })
 
     debug('leave %s -> %s', prev, ctx.path)
     ctx.path = prev
-    smartCopyTo(ctx, newCtx, KEYS_KOA_HANDLE_RESPONSE_FROM_CONTEXT)
+    syncApps(newCtx, ctx)
   }
 
   /**
@@ -117,6 +109,21 @@ function mount (prefix, app, option = {}) {
   }
 
   /**
+   * sync mounted app with container app props
+   * @param from   copy from app context
+   * @param to     copy to app context
+   */
+  function syncApps (from, to) {
+    // This keys will be read from the cxt in the koa app's handleResponse func
+    // got these keys from https://github.com/koajs/koa/blob/master/lib/application.js#L193
+    smartCopyTo(to, from, ['respond'])
+
+    // status is syncing mode yet, so need sync _explicitStatus to specify
+    // Must keep _explicitStatus before than body, otherwise status will be set to 200
+    smartCopyTo(to.response, from.response, ['_explicitStatus', 'body'])
+  }
+
+  /**
    * smart pick context values between preserved app context and hosted app's context
    * @param to copyTo app context
    * @param from copyFrom app context
@@ -132,6 +139,12 @@ function mount (prefix, app, option = {}) {
 
     props
       .filter(key => !!key)
-      .forEach(key => { to[key] = from[key] })
+      .forEach(key => {
+        // prevent setting the props empty value maybe will change other props to be any default value
+        // ps: set body emtpy, will make statusCode to be 204
+        if (to[key] !== from[key]) {
+          to[key] = from[key]
+        }
+      })
   }
 }
