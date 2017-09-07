@@ -459,6 +459,58 @@ describe('mount(/prefix, app, {preserve: true})', () => {
       .get('/aftermount')
       .expect('aftermount')
   })
+
+  it('easy get full mounted path(mount nested app)', async () => {
+    const mounted2 = new Koa()
+    mounted2.use(async (ctx, next) => {
+      ctx.body = ctx.mountPath
+      ctx.status = 200
+    })
+
+    const mounted1 = new Koa()
+    mounted1.use(mount('/mount2', mounted2, {preserve: true}))
+    mounted1.use(async (ctx) => {
+      ctx.body = ctx.mountPath
+      ctx.status = 200
+    })
+
+    const mounted3 = new Koa()
+    mounted3.use(async (ctx, next) => {
+      if (ctx.path === '/mount3') {
+        ctx.body = ctx.mountPath
+        ctx.status = 200
+      } else return next()
+    })
+
+    const mounted4 = new Koa()
+    mounted4.use(async (ctx, next) => {
+      ctx.body = ctx.mountPath
+      ctx.status = 200
+    })
+    mounted3.use(mount('/mount4', mounted4, {preserve: true}))
+
+    const app = new Koa()
+    app.use(mount('/mount1', mounted1, {preserve: true}))
+    app.use(mount(mounted3, {preserve: true}))
+
+    const server = app.listen()
+
+    await request(server)
+      .get('/mount1')
+      .expect('/mount1')
+
+    await request(server)
+      .get('/mount1/mount2')
+      .expect('/mount1/mount2')
+
+    await request(server)
+      .get('/mount3')
+      .expect('')
+
+    await request(server)
+      .get('/mount4')
+      .expect('/mount4')
+  })
 })
 
 describe('mount(/prefix) multiple', () => {

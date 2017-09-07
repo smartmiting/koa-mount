@@ -62,7 +62,7 @@ function mount (prefix, app, option = {}) {
       newCtx = app.createContext(ctx.req, ctx.res)
     }
 
-    newCtx.mountPath = prefix
+    newCtx.mountPath = (ctx.mountPath || '') + (prefix === '/' ? '' : prefix)
     newCtx.path = newPath
     syncApps(ctx, newCtx)
 
